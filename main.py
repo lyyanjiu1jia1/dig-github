@@ -25,38 +25,45 @@ def run_dig(domain):
         return []
 
 
-def update_hosts(ip, domain):
+def update_hosts_multiple(ips, domain):
     hosts_path = "/etc/hosts"
     backup_path = hosts_path + ".bak"
     os.system(f"sudo cp {hosts_path} {backup_path}")
-    pattern = re.compile(rf"^\s*\d+\.\d+\.\d+\.\d+\s+{domain}\s*$", re.MULTILINE)
+    pattern = re.compile(rf"^\s*\d+\.\d+\.\d+\.\d+\s+{domain}\s*(?:\s*#.*)?$", re.MULTILINE)
     with open(hosts_path, 'r') as f:
         lines = f.readlines()
     
-    # Check if domain already exists in hosts file
-    domain_exists = any(pattern.match(line) for line in lines)
+    # Filter out existing entries for this domain
+    new_lines = [line for line in lines if not pattern.match(line)]
     
-    if not domain_exists:
-        # Only add the entry if it doesn't already exist
-        new_lines = [line for line in lines if not pattern.match(line)]
-        new_lines.append(f"{ip} {domain}\n")
-        with open(hosts_path, 'w') as f:
-            f.writelines(new_lines)
-        os.system("sudo dscacheutil -flushcache")
-        print(f"Added {domain} to /etc/hosts with IP {ip}")
-    else:
-        print(f"{domain} already exists in /etc/hosts")
+    # Add new entries, using all IPs or up to 2 if there are more
+    ips_to_add = ips[:2] if len(ips) > 2 else ips
+    for i, ip in enumerate(ips_to_add):
+        if i == 0:
+            new_lines.append(f"{ip}    {domain}\n")
+        else:
+            new_lines.append(f"{ip}    {domain}  # 额外添加的备用IP\n")
+    
+    with open(hosts_path, 'w') as f:
+        f.writelines(new_lines)
+    os.system("sudo dscacheutil -flushcache")
+    print(f"Updated /etc/hosts with {len(ips_to_add)} entries for {domain}")
 
 
-if __name__ == "__main__":
-    domain = "github.com"
+def update_hosts_for_domain(domain):
     print(f"Resolving domain: {domain}")
     ips = run_dig(domain)
     print(f"IPs found: {ips}")
     if ips:
-        # Randomly choose one IP from the list
-        selected_ip = random.choice(ips)
-        update_hosts(selected_ip, domain)
-        print(f"Updated /etc/hosts: {selected_ip} {domain}")
+        update_hosts_multiple(ips, domain)
+        for i, ip in enumerate(ips[:2]):
+            suffix = "" if i == 0 else " (备用)"
+            print(f"Updated /etc/hosts: {ip} {domain}{suffix}")
     else:
-        print("Failed to resolve github.com")
+        print(f"Failed to resolve {domain}")
+
+
+if __name__ == "__main__":
+    domains = ["github.com", "github.global.ssl.fastly.net"]
+    for domain in domains:
+        update_hosts_for_domain(domain)
