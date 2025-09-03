@@ -3,8 +3,8 @@ import subprocess, re, os, random
 
 def run_dig(domain):
     try:
-        # Run dig without the +short flag to avoid malformed packet warning
-        output = subprocess.check_output(['dig', domain]).decode('utf-8')
+        # Run dig with Google's DNS server to avoid malformed packet warning
+        output = subprocess.check_output(['dig', '@8.8.8.8', domain]).decode('utf-8')
         print(f"Raw dig output: {repr(output)}")
         
         # Parse the full dig output to extract IP addresses
