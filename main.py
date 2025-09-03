@@ -1,4 +1,4 @@
-import subprocess, re, os
+import subprocess, re, os, random
 
 
 def run_dig(domain):
@@ -54,7 +54,9 @@ if __name__ == "__main__":
     ips = run_dig(domain)
     print(f"IPs found: {ips}")
     if ips:
-        update_hosts(ips[0], domain)
-        print(f"Updated /etc/hosts: {ips[0]} {domain}")
+        # Randomly choose one IP from the list
+        selected_ip = random.choice(ips)
+        update_hosts(selected_ip, domain)
+        print(f"Updated /etc/hosts: {selected_ip} {domain}")
     else:
         print("Failed to resolve github.com")
